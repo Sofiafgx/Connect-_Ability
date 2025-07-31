@@ -11,6 +11,7 @@
         <header>
             <h1>Word Video Recorder</h1>
             <p>Record 10 videos (5 seconds each) for every word</p>
+            <p class="dev-note">📤 Videos are automatically uploaded to the developer's server</p>
         </header>
 
         <div class="word-input-section">
@@ -37,8 +38,11 @@
             </div>
 
             <div class="recorded-videos">
-                <h3>Recorded Videos:</h3>
+                <h3>Recording Status:</h3>
                 <div id="videoList"></div>
+                <div class="info-note">
+                    <small>📝 Note: Videos are uploaded directly to the server for the developer. Users don't keep copies locally.</small>
+                </div>
             </div>
 
             <button id="finishWordBtn" style="display: none;">Finish This Word</button>

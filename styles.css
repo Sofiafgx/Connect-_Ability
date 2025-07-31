@@ -209,6 +209,20 @@ button:disabled {
     font-weight: 500;
 }
 
+.info-note {
+    background: #e6fffa;
+    border: 1px solid #81e6d9;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.info-note small {
+    color: #234e52;
+    font-weight: 500;
+}
+
 .completed-words {
     background: #f0fff4;
     padding: 20px;
@@ -284,4 +298,18 @@ button:disabled {
     #videoList {
         grid-template-columns: 1fr;
     }
+}
+
+.info-note {
+    background: #e6fffa;
+    border: 1px solid #81e6d9;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.info-note small {
+    color: #234e52;
+    font-weight: 500;
 }

@@ -200,8 +200,6 @@ class WordVideoRecorder {
 
     saveRecordedVideo(blob) {
         const videoData = {
-            blob: blob,
-            url: URL.createObjectURL(blob),
             timestamp: new Date().toISOString(),
             word: this.currentWord,
             index: this.recordedVideos.length + 1
@@ -209,9 +207,9 @@ class WordVideoRecorder {
 
         this.recordedVideos.push(videoData);
         this.updateVideoCount();
-        this.addVideoToList(videoData);
+        this.addVideoRecordConfirmation(videoData);
         
-        // Send to server
+        // Send to server (this is the only place video is stored)
         this.uploadVideo(blob, this.currentWord, this.recordedVideos.length);
 
         // Check if we have 10 videos
@@ -228,13 +226,8 @@ class WordVideoRecorder {
         formData.append('word', word);
         formData.append('videoIndex', videoIndex);
 
-        // Show upload status to user
-        const uploadStatus = document.createElement('div');
-        uploadStatus.textContent = `Uploading video ${videoIndex} to server...`;
-        uploadStatus.style.color = '#667eea';
-        uploadStatus.style.fontSize = '0.9rem';
-        uploadStatus.style.marginTop = '10px';
-        this.videoList.appendChild(uploadStatus);
+        // Update the upload status in the existing video item
+        const statusElement = document.getElementById(`upload-status-${videoIndex}`);
 
         try {
             const response = await fetch('/upload-video', {
@@ -245,70 +238,68 @@ class WordVideoRecorder {
             if (response.ok) {
                 const result = await response.json();
                 console.log('Video uploaded successfully:', result.message);
-                uploadStatus.textContent = `✓ Video ${videoIndex} saved to server (${result.filename})`;
-                uploadStatus.style.color = '#48bb78';
                 
-                // Show developer where video is saved
-                setTimeout(() => {
-                    uploadStatus.textContent = `📁 Saved to: uploads/${word}/${result.filename}`;
-                    uploadStatus.style.color = '#4299e1';
-                }, 2000);
+                if (statusElement) {
+                    statusElement.textContent = `✅ Uploaded to server successfully`;
+                    statusElement.style.color = '#48bb78';
+                    
+                    // Show it's saved on server only
+                    setTimeout(() => {
+                        statusElement.textContent = `💾 Saved on developer's server`;
+                        statusElement.style.color = '#4299e1';
+                    }, 2000);
+                }
                 
             } else {
                 const error = await response.json();
                 console.error('Failed to upload video:', error.error);
-                uploadStatus.textContent = `✗ Upload failed: ${error.error}`;
-                uploadStatus.style.color = '#e53e3e';
+                if (statusElement) {
+                    statusElement.textContent = `✗ Upload failed: ${error.error}`;
+                    statusElement.style.color = '#e53e3e';
+                }
             }
         } catch (error) {
             console.error('Error uploading video:', error);
-            uploadStatus.textContent = `✗ Upload error: ${error.message}`;
-            uploadStatus.style.color = '#e53e3e';
-            
-            // Still provide local download as backup
-            this.storeVideoLocally(blob, word, videoIndex);
+            if (statusElement) {
+                statusElement.textContent = `✗ Upload error: ${error.message}`;
+                statusElement.style.color = '#e53e3e';
+            }
         }
-    }
-
-    storeVideoLocally(blob, word, videoIndex) {
-        // Create a download link for local storage
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${word}_video_${videoIndex}.webm`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
         
-        // Auto-download (user will need to save manually)
-        // This is a fallback when server is not available
-        console.log(`Video ready for download: ${word}_video_${videoIndex}.webm`);
+        // Clear the blob from memory (don't store locally)
+        blob = null;
     }
 
-    addVideoToList(videoData) {
+    // No local storage - videos are only saved on the server
+
+    addVideoRecordConfirmation(videoData) {
         const videoItem = document.createElement('div');
         videoItem.className = 'video-item';
-        
-        const video = document.createElement('video');
-        video.src = videoData.url;
-        video.controls = true;
-        video.muted = true;
+        videoItem.style.background = '#f0fff4';
+        videoItem.style.border = '2px solid #9ae6b4';
         
         const info = document.createElement('p');
-        info.textContent = `Video ${videoData.index}`;
+        info.textContent = `✅ Video ${videoData.index} recorded`;
+        info.style.color = '#22543d';
+        info.style.fontWeight = 'bold';
+        info.style.margin = '0';
         
-        const downloadBtn = document.createElement('button');
-        downloadBtn.textContent = 'Download';
-        downloadBtn.style.fontSize = '0.8rem';
-        downloadBtn.style.padding = '5px 10px';
-        downloadBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.href = videoData.url;
-            a.download = `${this.currentWord}_video_${videoData.index}.webm`;
-            a.click();
-        };
+        const timestamp = document.createElement('small');
+        timestamp.textContent = `Recorded at: ${new Date(videoData.timestamp).toLocaleTimeString()}`;
+        timestamp.style.color = '#68d391';
+        timestamp.style.display = 'block';
+        timestamp.style.marginTop = '5px';
         
-        videoItem.appendChild(video);
+        const status = document.createElement('div');
+        status.textContent = '📤 Uploading to server...';
+        status.style.color = '#667eea';
+        status.style.fontSize = '0.9rem';
+        status.style.marginTop = '8px';
+        status.id = `upload-status-${videoData.index}`;
+        
         videoItem.appendChild(info);
-        videoItem.appendChild(downloadBtn);
+        videoItem.appendChild(timestamp);
+        videoItem.appendChild(status);
         
         this.videoList.appendChild(videoItem);
     }
