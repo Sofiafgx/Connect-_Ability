@@ -20,8 +20,8 @@ word-video-recorder/
 ├── index.html          # Main web interface
 ├── styles.css          # Modern CSS styling
 ├── script.js           # Frontend JavaScript logic
-├── server.js           # Node.js backend server
-├── package.json        # Dependencies and scripts
+├── app.py              # Python Flask backend server
+├── requirements.txt    # Python dependencies
 ├── README.md           # This file
 └── uploads/            # Created automatically
     ├── word1/          # Folder for first word
@@ -39,7 +39,7 @@ word-video-recorder/
 ## Setup Instructions
 
 ### Prerequisites
-- Node.js (version 14 or higher)
+- Python 3.7 or higher
 - A modern web browser with camera access
 - Internet connection for initial setup
 
@@ -51,23 +51,25 @@ word-video-recorder/
    cd word-video-recorder
    ```
 
-2. **Install dependencies**
+2. **Install Python dependencies**
    ```bash
-   npm install
-   ```
-
-3. **Start the server**
-   ```bash
-   npm start
+   pip install -r requirements.txt
    ```
    
-   For development with auto-restart:
+   Or if you prefer using a virtual environment (recommended):
    ```bash
-   npm run dev
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Start the Flask server**
+   ```bash
+   python app.py
    ```
 
 4. **Open your browser**
-   - Navigate to `http://localhost:3000`
+   - Navigate to `http://localhost:5000`
    - Allow camera and microphone permissions when prompted
 
 ## How to Use
@@ -101,11 +103,11 @@ All videos are automatically organized in the `uploads/` folder:
 
 ### API Endpoints
 
-The server provides several useful endpoints:
+The Flask server provides several useful endpoints:
 
 - `GET /api/words` - List all words with video counts
-- `GET /api/word-stats/:word` - Get detailed stats for a specific word
-- `GET /api/download-word/:word` - Download all videos for a word as ZIP
+- `GET /api/word-stats/<word>` - Get detailed stats for a specific word
+- `GET /api/download-word/<word>` - Download all videos for a word as ZIP
 - `POST /upload-video` - Upload endpoint (used by frontend)
 
 ## Technical Details
@@ -118,8 +120,8 @@ The server provides several useful endpoints:
 - **Local Storage**: Backup for completed words
 
 ### Backend Features
-- **Express.js**: Web server framework
-- **Multer**: File upload handling
+- **Flask**: Lightweight Python web framework
+- **Werkzeug**: Secure file upload handling
 - **Automatic Folder Creation**: Organizes videos by word
 - **Metadata Generation**: JSON files with video information
 - **CORS Support**: Cross-origin requests enabled
@@ -141,14 +143,24 @@ The server provides several useful endpoints:
 - Use HTTPS in production (required for camera access)
 
 ### Videos Not Uploading
-- Check if the server is running (`npm start`)
+- Check if the Flask server is running (`python app.py`)
 - Verify network connection
 - Videos will be available for manual download as backup
 
 ### Server Issues
-- Ensure Node.js is installed (version 14+)
-- Check if port 3000 is available
-- Run `npm install` to install dependencies
+- Ensure Python 3.7+ is installed
+- Check if port 5000 is available
+- Run `pip install -r requirements.txt` to install dependencies
+- Check for any error messages in the terminal
+
+### Python Virtual Environment Issues
+If you encounter dependency conflicts:
+```bash
+python -m venv word_recorder_env
+source word_recorder_env/bin/activate  # On Windows: word_recorder_env\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
 
 ## Customization
 
@@ -162,7 +174,16 @@ video: { width: 1280, height: 720 } // Higher quality
 ```
 
 ### Change Server Port
-Set environment variable: `PORT=8080 npm start`
+Modify the last line in `app.py`:
+```python
+app.run(debug=True, host='0.0.0.0', port=8080)  # Change port here
+```
+
+### Change Upload Directory
+Modify the `UPLOAD_FOLDER` variable in `app.py`:
+```python
+UPLOAD_FOLDER = 'my_videos'  # Change folder name
+```
 
 ## Browser Compatibility
 
@@ -172,6 +193,27 @@ Set environment variable: `PORT=8080 npm start`
 - Edge 79+
 
 **Note**: Camera access requires HTTPS in production environments.
+
+## Production Deployment
+
+For production deployment, consider:
+
+1. **Use a production WSGI server**:
+   ```bash
+   pip install gunicorn
+   gunicorn -w 4 -b 0.0.0.0:5000 app:app
+   ```
+
+2. **Set up HTTPS** (required for camera access)
+3. **Configure proper file permissions** for the uploads directory
+4. **Set up proper logging** and error handling
+5. **Consider using a reverse proxy** like Nginx
+
+## Dependencies
+
+- **Flask**: Web framework
+- **Flask-CORS**: Cross-origin resource sharing
+- **Werkzeug**: WSGI utilities and secure filename handling
 
 ## License
 

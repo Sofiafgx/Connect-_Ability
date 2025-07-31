@@ -179,9 +179,11 @@ class WordVideoRecorder {
             });
 
             if (response.ok) {
-                console.log('Video uploaded successfully');
+                const result = await response.json();
+                console.log('Video uploaded successfully:', result.message);
             } else {
-                console.error('Failed to upload video');
+                const error = await response.json();
+                console.error('Failed to upload video:', error.error);
             }
         } catch (error) {
             console.error('Error uploading video:', error);
