@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Recording Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .debug-section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Recording Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h3>Browser Support Check</h3>
+        <div id="browserSupport"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>Camera Test</h3>
+        <button onclick="testCamera()">Test Camera Access</button>
+        <div id="cameraStatus"></div>
+        <video id="videoPreview" autoplay muted></video>
+    </div>
+
+    <div class="debug-section">
+        <h3>Recording Test</h3>
+        <button onclick="startRecording()">Start Recording</button>
+        <button onclick="stopRecording()">Stop Recording</button>
+        <div id="recordingStatus"></div>
+        <div id="recordedVideo"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>Debug Log</h3>
+        <div id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let stream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'color: #f00' : type === 'success' ? 'color: #0f0' : 'color: #0ff';
+            logDiv.innerHTML += `<div style="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function checkBrowserSupport() {
+            const support = document.getElementById('browserSupport');
+            let html = '';
+
+            // Check getUserMedia support
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                html += '<div class="success">✓ getUserMedia is supported</div>';
+                log('getUserMedia is supported', 'success');
+            } else {
+                html += '<div class="error">✗ getUserMedia is NOT supported</div>';
+                log('getUserMedia is NOT supported', 'error');
+            }
+
+            // Check MediaRecorder support
+            if (typeof MediaRecorder !== 'undefined') {
+                html += '<div class="success">✓ MediaRecorder is supported</div>';
+                log('MediaRecorder is supported', 'success');
+
+                // Check supported MIME types
+                const mimeTypes = [
+                    'video/webm;codecs=vp9',
+                    'video/webm;codecs=vp8',
+                    'video/webm',
+                    'video/mp4',
+                    'video/mp4;codecs=h264'
+                ];
+
+                html += '<div class="info"><strong>Supported MIME types:</strong><ul>';
+                mimeTypes.forEach(type => {
+                    const supported = MediaRecorder.isTypeSupported(type);
+                    html += `<li>${type}: ${supported ? '✓' : '✗'}</li>`;
+                    log(`MIME type ${type}: ${supported ? 'supported' : 'not supported'}`, supported ? 'success' : 'error');
+                });
+                html += '</ul></div>';
+            } else {
+                html += '<div class="error">✗ MediaRecorder is NOT supported</div>';
+                log('MediaRecorder is NOT supported', 'error');
+            }
+
+            support.innerHTML = html;
+        }
+
+        async function testCamera() {
+            const status = document.getElementById('cameraStatus');
+            const video = document.getElementById('videoPreview');
+
+            try {
+                log('Requesting camera access...');
+                status.innerHTML = '<div class="info">Requesting camera access...</div>';
+
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 },
+                    audio: true
+                });
+
+                video.srcObject = stream;
+                status.innerHTML = '<div class="success">✓ Camera access granted</div>';
+                log('Camera access granted', 'success');
+
+                // Log stream details
+                const videoTrack = stream.getVideoTracks()[0];
+                const audioTrack = stream.getAudioTracks()[0];
+                
+                if (videoTrack) {
+                    const settings = videoTrack.getSettings();
+                    log(`Video track: ${settings.width}x${settings.height}, ${settings.frameRate}fps`);
+                }
+                
+                if (audioTrack) {
+                    log('Audio track available');
+                }
+
+            } catch (error) {
+                let errorMsg = `Camera error: ${error.name} - ${error.message}`;
+                status.innerHTML = `<div class="error">✗ ${errorMsg}</div>`;
+                log(errorMsg, 'error');
+            }
+        }
+
+        function startRecording() {
+            if (!stream) {
+                log('No camera stream available. Test camera first.', 'error');
+                return;
+            }
+
+            const status = document.getElementById('recordingStatus');
+            
+            try {
+                log('Starting recording...');
+                
+                // Determine best MIME type
+                let options = {};
+                if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                    options.mimeType = 'video/webm;codecs=vp9';
+                } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                    options.mimeType = 'video/webm;codecs=vp8';
+                } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                    options.mimeType = 'video/webm';
+                } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                    options.mimeType = 'video/mp4';
+                }
+
+                log(`Using MIME type: ${options.mimeType || 'default'}`);
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                recordedChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        log(`Data chunk received: ${event.data.size} bytes`);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    log('Recording stopped');
+                    const blob = new Blob(recordedChunks, { 
+                        type: options.mimeType || 'video/webm' 
+                    });
+                    
+                    const url = URL.createObjectURL(blob);
+                    const videoElement = document.createElement('video');
+                    videoElement.src = url;
+                    videoElement.controls = true;
+                    videoElement.style.width = '100%';
+                    videoElement.style.maxWidth = '400px';
+                    
+                    const recordedDiv = document.getElementById('recordedVideo');
+                    recordedDiv.innerHTML = '<h4>Recorded Video:</h4>';
+                    recordedDiv.appendChild(videoElement);
+                    
+                    log(`Recording complete. Blob size: ${blob.size} bytes`, 'success');
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    log(`MediaRecorder error: ${event.error}`, 'error');
+                };
+
+                mediaRecorder.start();
+                status.innerHTML = '<div class="success">✓ Recording started</div>';
+                log('MediaRecorder started successfully', 'success');
+
+            } catch (error) {
+                const errorMsg = `Recording error: ${error.message}`;
+                status.innerHTML = `<div class="error">✗ ${errorMsg}</div>`;
+                log(errorMsg, 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                log('Stop recording requested');
+            } else {
+                log('No active recording to stop', 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, checking browser support...');
+            checkBrowserSupport();
+        });
+    </script>
+</body>
+</html>
