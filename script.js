@@ -67,14 +67,34 @@ class WordVideoRecorder {
 
     async initializeCamera() {
         try {
+            console.log('Requesting camera access...');
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480 },
                 audio: true
             });
             this.videoPreview.srcObject = this.stream;
+            console.log('Camera initialized successfully');
+            
+            // Wait for video to load
+            await new Promise((resolve) => {
+                this.videoPreview.onloadedmetadata = resolve;
+            });
+            
         } catch (error) {
             console.error('Error accessing camera:', error);
-            alert('Error accessing camera. Please make sure you have granted camera permissions.');
+            let errorMessage = 'Error accessing camera. ';
+            
+            if (error.name === 'NotAllowedError') {
+                errorMessage += 'Please grant camera permissions and reload the page.';
+            } else if (error.name === 'NotFoundError') {
+                errorMessage += 'No camera found on this device.';
+            } else if (error.name === 'NotSupportedError') {
+                errorMessage += 'Camera access is not supported in this browser.';
+            } else {
+                errorMessage += 'Please check your camera settings and try again.';
+            }
+            
+            alert(errorMessage);
         }
     }
 
@@ -92,10 +112,29 @@ class WordVideoRecorder {
         // Add recording animation
         this.videoPreview.classList.add('recording');
 
-        // Initialize MediaRecorder
-        this.mediaRecorder = new MediaRecorder(this.stream, {
-            mimeType: 'video/webm;codecs=vp9'
-        });
+        // Initialize MediaRecorder with fallback options
+        let options = {};
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+            options.mimeType = 'video/webm;codecs=vp9';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+            options.mimeType = 'video/webm;codecs=vp8';
+        } else if (MediaRecorder.isTypeSupported('video/webm')) {
+            options.mimeType = 'video/webm';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+            options.mimeType = 'video/mp4';
+        }
+
+        try {
+            this.mediaRecorder = new MediaRecorder(this.stream, options);
+            console.log('MediaRecorder initialized with:', options.mimeType || 'default settings');
+        } catch (error) {
+            console.error('Error creating MediaRecorder:', error);
+            alert('Error initializing video recorder. Your browser may not support video recording.');
+            this.recordBtn.disabled = false;
+            this.stopBtn.disabled = true;
+            this.videoPreview.classList.remove('recording');
+            return;
+        }
 
         const chunks = [];
         this.mediaRecorder.ondataavailable = (event) => {
@@ -105,12 +144,29 @@ class WordVideoRecorder {
         };
 
         this.mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
+            const mimeType = options.mimeType || 'video/webm';
+            const blob = new Blob(chunks, { type: mimeType });
             this.saveRecordedVideo(blob);
             this.videoPreview.classList.remove('recording');
         };
 
-        this.mediaRecorder.start();
+        this.mediaRecorder.onerror = (event) => {
+            console.error('MediaRecorder error:', event.error);
+            alert('Recording error occurred: ' + event.error);
+            this.stopRecording();
+        };
+
+        try {
+            this.mediaRecorder.start();
+            console.log('Recording started successfully');
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            alert('Failed to start recording: ' + error.message);
+            this.recordBtn.disabled = false;
+            this.stopBtn.disabled = true;
+            this.videoPreview.classList.remove('recording');
+            return;
+        }
 
         // Start countdown timer
         this.countdownTimer = setInterval(() => {

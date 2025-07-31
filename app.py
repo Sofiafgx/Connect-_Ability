@@ -82,6 +82,12 @@ def script():
         content = f.read()
     return content, 200, {'Content-Type': 'application/javascript'}
 
+@app.route('/debug')
+def debug():
+    """Serve debug page"""
+    with open('debug.html', 'r') as f:
+        return f.read()
+
 @app.route('/upload-video', methods=['POST'])
 def upload_video():
     """Handle video upload"""
