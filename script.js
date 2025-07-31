@@ -228,6 +228,14 @@ class WordVideoRecorder {
         formData.append('word', word);
         formData.append('videoIndex', videoIndex);
 
+        // Show upload status to user
+        const uploadStatus = document.createElement('div');
+        uploadStatus.textContent = `Uploading video ${videoIndex} to server...`;
+        uploadStatus.style.color = '#667eea';
+        uploadStatus.style.fontSize = '0.9rem';
+        uploadStatus.style.marginTop = '10px';
+        this.videoList.appendChild(uploadStatus);
+
         try {
             const response = await fetch('/upload-video', {
                 method: 'POST',
@@ -237,13 +245,27 @@ class WordVideoRecorder {
             if (response.ok) {
                 const result = await response.json();
                 console.log('Video uploaded successfully:', result.message);
+                uploadStatus.textContent = `✓ Video ${videoIndex} saved to server (${result.filename})`;
+                uploadStatus.style.color = '#48bb78';
+                
+                // Show developer where video is saved
+                setTimeout(() => {
+                    uploadStatus.textContent = `📁 Saved to: uploads/${word}/${result.filename}`;
+                    uploadStatus.style.color = '#4299e1';
+                }, 2000);
+                
             } else {
                 const error = await response.json();
                 console.error('Failed to upload video:', error.error);
+                uploadStatus.textContent = `✗ Upload failed: ${error.error}`;
+                uploadStatus.style.color = '#e53e3e';
             }
         } catch (error) {
             console.error('Error uploading video:', error);
-            // Store locally if server is not available
+            uploadStatus.textContent = `✗ Upload error: ${error.message}`;
+            uploadStatus.style.color = '#e53e3e';
+            
+            // Still provide local download as backup
             this.storeVideoLocally(blob, word, videoIndex);
         }
     }

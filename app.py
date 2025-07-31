@@ -88,6 +88,12 @@ def debug():
     with open('debug.html', 'r') as f:
         return f.read()
 
+@app.route('/developer')
+def developer():
+    """Serve developer dashboard"""
+    with open('developer.html', 'r') as f:
+        return f.read()
+
 @app.route('/upload-video', methods=['POST'])
 def upload_video():
     """Handle video upload"""
@@ -134,9 +140,10 @@ def upload_video():
         metadata['videos'].append(video_info)
         save_metadata(word, metadata)
         
-        print(f"Video uploaded: {filename}")
-        print(f"Word: {word}, Video Index: {video_index}")
-        print(f"File saved to: {file_path}")
+        print(f"✅ VIDEO UPLOADED: {filename}")
+        print(f"📁 Word: '{word}' | Video #{video_index} | Size: {os.path.getsize(file_path)} bytes")
+        print(f"💾 Saved to: {file_path}")
+        print(f"📊 Total videos for '{word}': {len(metadata['videos'])}")
         
         return jsonify({
             'success': True,

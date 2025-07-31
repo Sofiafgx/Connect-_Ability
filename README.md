@@ -69,7 +69,9 @@ word-video-recorder/
    ```
 
 4. **Open your browser**
-   - Navigate to `http://localhost:5000`
+   - Navigate to `http://localhost:5000` (for users to record videos)
+   - Navigate to `http://localhost:5000/developer` (for you to view all uploaded videos)
+   - Navigate to `http://localhost:5000/debug` (to test recording functionality)
    - Allow camera and microphone permissions when prompted
 
 ## How to Use
@@ -94,12 +96,26 @@ word-video-recorder/
 
 ### For Developers (Accessing Videos)
 
-All videos are automatically organized in the `uploads/` folder:
+**🎯 Easy Access via Developer Dashboard:**
+- Go to `http://localhost:5000/developer` to see all uploaded videos
+- View statistics, download ZIP files, and manage collections
+- Real-time updates every 30 seconds
 
+**📁 Direct File Access:**
+All videos are automatically organized in the `uploads/` folder:
 - Each word gets its own folder (e.g., `uploads/hello/`)
 - Videos are named with timestamps: `word_video_1_2024-01-15T10-30-45-123Z.webm`
 - A `metadata.json` file tracks all video information
 - Videos are in WebM format, compatible with most video players
+
+**📊 Server Logs:**
+Watch the terminal running the Flask server to see real-time upload confirmations:
+```
+✅ VIDEO UPLOADED: hello_video_1_2024-01-15T10-30-45.webm
+📁 Word: 'hello' | Video #1 | Size: 245760 bytes
+💾 Saved to: uploads/hello/hello_video_1_2024-01-15T10-30-45.webm
+📊 Total videos for 'hello': 1
+```
 
 ### API Endpoints
 
