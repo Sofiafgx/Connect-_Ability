@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Ability</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        input[type="text"] {
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .purple-button {
+            background-color: #7966c8;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        .purple-button:hover {
+            background-color: #6854b3;
+        }
+        
+        .purple-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .grey-button {
+            background-color: #888;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background-color 0.3s;
+            display: none;
+        }
+        
+        .grey-button:hover {
+            background-color: #777;
+        }
+        
+        .video-section {
+            margin-top: 30px;
+        }
+        
+        video {
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .progress {
+            margin: 20px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #7966c8;
+            margin: 10px 0;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.recording {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .status.stopped {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .completed {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Connect Ability</h1>
+        
+        <div class="input-section">
+            <input type="text" id="wordInput" placeholder="Enter a word" maxlength="50">
+            <br>
+            <button class="purple-button" id="startButton" onclick="startRecording()">Start filming</button>
+            <button class="grey-button" id="nextButton" onclick="goToNext()">Go to next</button>
+        </div>
+        
+        <div class="video-section">
+            <video id="videoElement" autoplay muted></video>
+            <div class="timer" id="timer"></div>
+            <div class="status" id="status"></div>
+            <div class="progress" id="progress">Ready to start</div>
+        </div>
+        
+        <div id="completedMessage" class="completed" style="display: none;">
+            <h2>All videos completed!</h2>
+            <p>10 videos have been recorded and saved to folders.</p>
+            <button class="purple-button" onclick="showVideoStructure()">View Saved Videos</button>
+        </div>
+        
+        <div id="videoStructure" style="display: none; margin-top: 20px;">
+            <h3>Saved Videos by Word:</h3>
+            <div id="structureContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let currentVideoCount = 0;
+        let totalVideos = 10;
+        let currentWord = '';
+        let stream;
+        let recordingTimer;
+        let timeLeft = 5;
+        
+        // Initialize camera
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                document.getElementById('videoElement').srcObject = stream;
+                updateStatus('Camera ready', 'stopped');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                updateStatus('Camera access denied', 'stopped');
+            }
+        }
+        
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+        
+        function updateProgress() {
+            const progressElement = document.getElementById('progress');
+            if (currentVideoCount === 0) {
+                progressElement.textContent = 'Ready to start';
+            } else {
+                progressElement.textContent = `Video ${currentVideoCount} of ${totalVideos} completed`;
+            }
+        }
+        
+        function updateTimer() {
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = timeLeft > 0 ? `Recording: ${timeLeft}s` : '';
+        }
+        
+        async function startRecording() {
+            const wordInput = document.getElementById('wordInput');
+            currentWord = wordInput.value.trim();
+            
+            if (!currentWord) {
+                alert('Please enter a word before starting');
+                return;
+            }
+            
+            if (!stream) {
+                await initCamera();
+                if (!stream) return;
+            }
+            
+            // Reset for new recording
+            recordedChunks = [];
+            timeLeft = 5;
+            
+            // Setup media recorder
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                saveVideo();
+            };
+            
+            // Start recording
+            mediaRecorder.start();
+            currentVideoCount++;
+            
+            // Update UI
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('nextButton').style.display = 'none';
+            updateStatus('Recording...', 'recording');
+            updateProgress();
+            
+            // Start countdown timer
+            recordingTimer = setInterval(() => {
+                updateTimer();
+                timeLeft--;
+                
+                if (timeLeft < 0) {
+                    stopRecording();
+                }
+            }, 1000);
+            
+            updateTimer();
+        }
+        
+        function stopRecording() {
+            clearInterval(recordingTimer);
+            mediaRecorder.stop();
+            
+            updateStatus('Recording stopped', 'stopped');
+            document.getElementById('timer').textContent = '';
+            
+            if (currentVideoCount < totalVideos) {
+                document.getElementById('nextButton').style.display = 'inline-block';
+            } else {
+                showCompletion();
+            }
+        }
+        
+        function goToNext() {
+            document.getElementById('nextButton').style.display = 'none';
+            
+            if (currentVideoCount < totalVideos) {
+                document.getElementById('startButton').style.display = 'inline-block';
+                updateStatus('Ready for next video', 'stopped');
+            } else {
+                showCompletion();
+            }
+        }
+        
+        function showCompletion() {
+            document.getElementById('completedMessage').style.display = 'block';
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('nextButton').style.display = 'none';
+            updateStatus('All videos completed!', 'stopped');
+        }
+        
+        async function saveVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            
+            // Create FormData to send to server
+            const formData = new FormData();
+            formData.append('video', blob, `${currentWord}_video_${currentVideoCount}.webm`);
+            formData.append('word', currentWord);
+            formData.append('videoNumber', currentVideoCount);
+            
+            try {
+                const response = await fetch('/upload-video', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log(`Video ${currentVideoCount} saved for word: ${currentWord}`);
+                    updateStatus(`Video saved to ${currentWord} folder`, 'stopped');
+                } else {
+                    console.error('Failed to save video:', result.error);
+                    updateStatus('Failed to save video', 'stopped');
+                }
+            } catch (error) {
+                console.error('Error uploading video:', error);
+                updateStatus('Error saving video', 'stopped');
+                
+                // Fallback: download locally if server upload fails
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentWord}_video_${currentVideoCount}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+        
+        async function showVideoStructure() {
+            try {
+                const response = await fetch('/videos-structure');
+                const structure = await response.json();
+                
+                const structureDiv = document.getElementById('videoStructure');
+                const contentDiv = document.getElementById('structureContent');
+                
+                let html = '';
+                
+                if (Object.keys(structure).length === 0) {
+                    html = '<p>No videos saved yet.</p>';
+                } else {
+                    for (const [word, videos] of Object.entries(structure)) {
+                        html += `<div style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">`;
+                        html += `<h4>Word: "${word}" (${videos.length} videos)</h4>`;
+                        html += `<ul style="text-align: left;">`;
+                        videos.forEach(video => {
+                            html += `<li>${video}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                }
+                
+                contentDiv.innerHTML = html;
+                structureDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Error fetching video structure:', error);
+                alert('Error loading video structure');
+            }
+        }
+        
+        // Initialize camera when page loads
+        window.addEventListener('load', initCamera);
+    </script>
+</body>
+</html>
