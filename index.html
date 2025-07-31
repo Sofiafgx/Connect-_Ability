@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Video Recorder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Word Video Recorder</h1>
+            <p>Record 10 videos (5 seconds each) for every word</p>
+        </header>
+
+        <div class="word-input-section">
+            <label for="wordInput">Enter a word:</label>
+            <input type="text" id="wordInput" placeholder="Type a word..." />
+            <button id="startWordBtn">Start Recording for This Word</button>
+        </div>
+
+        <div class="recording-section" id="recordingSection" style="display: none;">
+            <h2>Recording for: <span id="currentWord"></span></h2>
+            <div class="progress-info">
+                <span id="videoCount">0</span> / 10 videos completed
+            </div>
+            
+            <div class="video-container">
+                <video id="videoPreview" autoplay muted></video>
+                <canvas id="recordingCanvas" style="display: none;"></canvas>
+            </div>
+
+            <div class="recording-controls">
+                <button id="recordBtn">Start Recording</button>
+                <button id="stopBtn" disabled>Stop Recording</button>
+                <div class="timer" id="timer">5</div>
+            </div>
+
+            <div class="recorded-videos">
+                <h3>Recorded Videos:</h3>
+                <div id="videoList"></div>
+            </div>
+
+            <button id="finishWordBtn" style="display: none;">Finish This Word</button>
+            <button id="newWordBtn" style="display: none;">Record New Word</button>
+        </div>
+
+        <div class="completed-words">
+            <h3>Completed Words:</h3>
+            <div id="completedWordsList"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
