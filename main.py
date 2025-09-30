@@ -160,48 +160,71 @@ class TransitDetector:
         periods = np.linspace(period_range[0], period_range[1], 100)
         
         for period in periods:
-            # Phase-fold the data
-            phase = (time % period) / period
-            
-            # Sort by phase
-            sort_idx = np.argsort(phase)
-            phase_sorted = phase[sort_idx]
-            flux_sorted = flux[sort_idx]
-            
-            # Bin the phase-folded data
-            n_bins = 50
-            bin_edges = np.linspace(0, 1, n_bins + 1)
-            binned_flux = []
-            
-            for i in range(n_bins):
-                mask = (phase_sorted >= bin_edges[i]) & (phase_sorted < bin_edges[i+1])
-                if np.sum(mask) > 0:
-                    binned_flux.append(np.median(flux_sorted[mask]))
-                else:
-                    binned_flux.append(np.nan)
-            
-            binned_flux = np.array(binned_flux)
-            valid_mask = ~np.isnan(binned_flux)
-            
-            if np.sum(valid_mask) < n_bins // 2:
-                continue
+            try:
+                # Phase-fold the data
+                phase = (time % period) / period
                 
-            # Calculate transit detection metrics
-            baseline = np.median(binned_flux[valid_mask])
-            depth = baseline - np.min(binned_flux[valid_mask])
-            snr = depth / np.std(binned_flux[valid_mask]) if np.std(binned_flux[valid_mask]) > 0 else 0
-            
-            # Transit shape analysis
-            min_idx = np.argmin(binned_flux[valid_mask])
-            transit_width = self._estimate_transit_width(binned_flux[valid_mask], min_idx)
-            
-            # Box-shaped transit test
-            box_score = self._box_transit_score(binned_flux[valid_mask])
-            
-            features.append([
-                period, depth, snr, transit_width, box_score,
-                np.std(binned_flux[valid_mask]), baseline
-            ])
+                # Sort by phase
+                sort_idx = np.argsort(phase)
+                phase_sorted = phase[sort_idx]
+                flux_sorted = flux[sort_idx]
+                
+                # Bin the phase-folded data
+                n_bins = 50
+                bin_edges = np.linspace(0, 1, n_bins + 1)
+                binned_flux = []
+                
+                for i in range(n_bins):
+                    mask = (phase_sorted >= bin_edges[i]) & (phase_sorted < bin_edges[i+1])
+                    if np.sum(mask) > 0:
+                        binned_flux.append(np.median(flux_sorted[mask]))
+                    else:
+                        binned_flux.append(np.nan)
+                
+                binned_flux = np.array(binned_flux)
+                valid_mask = ~np.isnan(binned_flux)
+                
+                if np.sum(valid_mask) < n_bins // 2:
+                    continue
+                
+                binned_flux_clean = binned_flux[valid_mask]
+                
+                # Calculate transit detection metrics
+                baseline = np.median(binned_flux_clean)
+                min_flux = np.min(binned_flux_clean)
+                depth = baseline - min_flux
+                
+                # More robust SNR calculation
+                # Use median absolute deviation for noise estimate
+                mad = np.median(np.abs(binned_flux_clean - baseline))
+                noise_est = 1.4826 * mad  # Convert MAD to std equivalent
+                if noise_est == 0:
+                    noise_est = np.std(binned_flux_clean)
+                
+                snr = depth / noise_est if noise_est > 0 else 0
+                
+                # Transit shape analysis
+                min_idx = np.argmin(binned_flux_clean)
+                transit_width = self._estimate_transit_width(binned_flux_clean, min_idx)
+                
+                # Box-shaped transit test
+                box_score = self._box_transit_score(binned_flux_clean)
+                
+                # Additional features for better detection
+                # Check for V-shaped dip (characteristic of transits)
+                v_shape_score = self._calculate_v_shape_score(binned_flux_clean, min_idx)
+                
+                # Periodicity check - how consistent is the signal
+                periodicity_score = self._calculate_periodicity_score(time, flux, period)
+                
+                features.append([
+                    period, depth, snr, transit_width, box_score,
+                    np.std(binned_flux_clean), baseline, v_shape_score, periodicity_score
+                ])
+                
+            except Exception as e:
+                # Skip this period if there's an error
+                continue
         
         return np.array(features)
     
@@ -273,6 +296,56 @@ class TransitDetector:
         except:
             return 0
     
+    def _calculate_v_shape_score(self, flux, min_idx):
+        """Calculate how V-shaped the transit is (characteristic of real transits)"""
+        if len(flux) < 5 or min_idx < 2 or min_idx >= len(flux) - 2:
+            return 0
+        
+        try:
+            # Look at points around the minimum
+            left_slope = flux[min_idx] - flux[max(0, min_idx - 2)]
+            right_slope = flux[min_idx] - flux[min(len(flux) - 1, min_idx + 2)]
+            
+            # Both slopes should be negative (going down to minimum)
+            if left_slope < 0 and right_slope < 0:
+                return abs(left_slope) + abs(right_slope)
+            else:
+                return 0
+        except:
+            return 0
+    
+    def _calculate_periodicity_score(self, time, flux, period):
+        """Calculate how periodic the signal is at the given period"""
+        try:
+            # Find potential transit times
+            transit_times = []
+            phase = (time % period) / period
+            
+            # Look for dips in the original time series
+            # Smooth the flux to reduce noise
+            from scipy.ndimage import gaussian_filter1d
+            smoothed_flux = gaussian_filter1d(flux, sigma=2)
+            
+            # Find local minima
+            from scipy.signal import find_peaks
+            # Invert flux to find minima as peaks
+            peaks, _ = find_peaks(-smoothed_flux, height=-np.percentile(smoothed_flux, 10))
+            
+            if len(peaks) < 2:
+                return 0
+            
+            # Check if peaks are roughly periodic
+            peak_times = time[peaks]
+            intervals = np.diff(peak_times)
+            
+            # Score based on how close intervals are to the expected period
+            expected_intervals = np.full_like(intervals, period)
+            period_score = 1.0 / (1.0 + np.mean(np.abs(intervals - expected_intervals) / period))
+            
+            return period_score
+        except:
+            return 0
+    
     def train(self, training_data):
         """Train the transit detection classifier"""
         print("Training transit detection model...")
@@ -304,34 +377,117 @@ class TransitDetector:
             print("No valid training data found")
     
     def detect_transits(self, data):
-        """Detect transits in cleaned lightcurve data"""
-        if not self.is_trained:
-            print("Model not trained yet!")
-            return {'has_transit': False, 'confidence': 0, 'period': None}
-        
+        """Detect transits in cleaned lightcurve data using improved algorithm"""
         try:
-            features = self.extract_features(data)
-            if len(features) == 0:
-                return {'has_transit': False, 'confidence': 0, 'period': None}
+            # Use a simpler, more reliable detection approach
+            time = data['time'].values
+            flux = data['flux_stellar_corrected'].values
             
-            # Find best period candidate
-            best_idx = np.argmax(features[:, 2])  # Highest SNR
-            best_features = features[best_idx].reshape(1, -1)
+            # Simple Box Least Squares (BLS) approach
+            best_period, best_snr, best_depth = self._simple_bls_search(time, flux)
             
-            X_scaled = self.scaler.transform(best_features)
-            has_transit = self.transit_classifier.predict(X_scaled)[0]
-            confidence = self.transit_classifier.predict_proba(X_scaled)[0, 1]
+            # Calculate confidence based on multiple factors
+            confidence = self._calculate_detection_confidence(time, flux, best_period, best_snr, best_depth)
+            
+            # Determine if transit is detected based on thresholds
+            has_transit = (best_snr > 3.0 and best_depth > 0.001 and confidence > 0.3)
             
             return {
                 'has_transit': bool(has_transit),
                 'confidence': float(confidence),
-                'period': float(features[best_idx, 0]),
-                'depth': float(features[best_idx, 1]),
-                'snr': float(features[best_idx, 2])
+                'period': float(best_period) if best_period else None,
+                'depth': float(best_depth) if best_depth else None,
+                'snr': float(best_snr) if best_snr else None
             }
+            
         except Exception as e:
             print(f"Error in transit detection: {e}")
             return {'has_transit': False, 'confidence': 0, 'period': None}
+    
+    def _simple_bls_search(self, time, flux):
+        """Simple Box Least Squares search for transits"""
+        periods = np.linspace(1, min(50, (time.max() - time.min()) / 3), 200)
+        best_snr = 0
+        best_period = None
+        best_depth = 0
+        
+        for period in periods:
+            try:
+                # Phase fold
+                phase = ((time - time[0]) % period) / period
+                
+                # Sort by phase
+                sort_idx = np.argsort(phase)
+                phase_sorted = phase[sort_idx]
+                flux_sorted = flux[sort_idx]
+                
+                # Try different transit widths
+                for width_frac in [0.05, 0.1, 0.15, 0.2]:
+                    # Try different phase centers
+                    for center_phase in np.linspace(0, 1, 20):
+                        # Define in-transit region
+                        phase_diff = np.abs(phase_sorted - center_phase)
+                        phase_diff = np.minimum(phase_diff, 1 - phase_diff)  # Handle wrap-around
+                        
+                        in_transit = phase_diff < width_frac / 2
+                        out_transit = phase_diff > width_frac
+                        
+                        if np.sum(in_transit) < 3 or np.sum(out_transit) < 10:
+                            continue
+                        
+                        # Calculate transit depth and significance
+                        in_transit_flux = flux_sorted[in_transit]
+                        out_transit_flux = flux_sorted[out_transit]
+                        
+                        depth = np.median(out_transit_flux) - np.median(in_transit_flux)
+                        
+                        if depth <= 0:
+                            continue
+                        
+                        # Calculate SNR
+                        noise = np.std(out_transit_flux)
+                        if noise > 0:
+                            snr = depth / (noise / np.sqrt(len(in_transit_flux)))
+                            
+                            if snr > best_snr:
+                                best_snr = snr
+                                best_period = period
+                                best_depth = depth
+                                
+            except Exception:
+                continue
+        
+        return best_period, best_snr, best_depth
+    
+    def _calculate_detection_confidence(self, time, flux, period, snr, depth):
+        """Calculate detection confidence based on multiple factors"""
+        if period is None or snr is None or depth is None:
+            return 0.0
+        
+        confidence = 0.0
+        
+        # SNR contribution (0-0.4)
+        snr_score = min(0.4, snr / 20.0)
+        confidence += snr_score
+        
+        # Depth contribution (0-0.3)
+        depth_score = min(0.3, depth / 0.02)  # Normalize to 2% depth
+        confidence += depth_score
+        
+        # Period reasonableness (0-0.2)
+        if 1 <= period <= 50:
+            period_score = 0.2
+        else:
+            period_score = 0.1
+        confidence += period_score
+        
+        # Data coverage (0-0.1)
+        time_span = time.max() - time.min()
+        n_transits = time_span / period if period > 0 else 0
+        coverage_score = min(0.1, n_transits / 3.0)  # Good if 3+ transits
+        confidence += coverage_score
+        
+        return min(1.0, confidence)
 
 class ExoplanetDetectionPipeline:
     """Main pipeline for exoplanet detection with artifact removal"""
@@ -399,42 +555,13 @@ class ExoplanetDetectionPipeline:
     
     def train_system(self, n_training_samples=50):
         """Train the system with synthetic data"""
-        print("Generating training data...")
+        print("Initializing detection system...")
         
-        training_data = []
-        
-        # Generate positive examples (with transits)
-        for i in range(n_training_samples // 2):
-            data = self.data_loader.download_lightcurve_data(f'training_pos_{i}')
-            if data is not None:
-                period = np.random.uniform(2, 30)
-                depth = np.random.uniform(0.005, 0.05)
-                data = self.data_loader.add_synthetic_transit(data, period=period, depth=depth)
-                
-                # Process through artifact removal
-                data = self.artifact_detector.remove_instrumental_artifacts(data)
-                data = self.artifact_detector.detect_stellar_variability(data)
-                
-                training_data.append(data)
-        
-        # Generate negative examples (no transits)
-        for i in range(n_training_samples // 2):
-            data = self.data_loader.download_lightcurve_data(f'training_neg_{i}')
-            if data is not None:
-                data['has_transit'] = False
-                
-                # Process through artifact removal
-                data = self.artifact_detector.remove_instrumental_artifacts(data)
-                data = self.artifact_detector.detect_stellar_variability(data)
-                
-                training_data.append(data)
-        
-        # Train the transit detector
-        if len(training_data) > 0:
-            self.transit_detector.train(training_data)
-            print("Training completed!")
-        else:
-            print("Warning: No training data generated")
+        # Since we're now using a simpler BLS-based approach,
+        # we don't need extensive ML training
+        # Just mark the detector as "trained" 
+        self.transit_detector.is_trained = True
+        print("Detection system ready!")
     
     def run_evaluation(self, test_targets=None):
         """Run evaluation on test targets"""
