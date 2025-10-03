@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exoplanet Detection AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">🪐 Exoplanet Detection AI</h1>
+                <p class="subtitle">Advanced Neural Network for Transit Signal Classification</p>
+                <p class="description">Powered by NASA Kepler, K2, and TESS Mission Data</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Info Section -->
+            <section class="info-section">
+                <div class="info-card">
+                    <h3>🎯 About This System</h3>
+                    <p>This AI model analyzes transit signal parameters to classify celestial objects as <strong>Confirmed Exoplanets</strong>, <strong>Planetary Candidates</strong>, or <strong>False Positives</strong>.</p>
+                    <p>The neural network has been trained on thousands of observations from NASA's exoplanet missions, incorporating advanced techniques like attention mechanisms and SMOTE class balancing.</p>
+                </div>
+            </section>
+
+            <!-- Input Form -->
+            <section class="input-section">
+                <h2 class="section-title">Enter Transit Parameters</h2>
+                
+                <form id="predictionForm" class="parameter-form">
+                    <div class="form-grid">
+                        <!-- Transit Properties -->
+                        <div class="form-group">
+                            <label for="orbital_period" class="form-label">
+                                Orbital Period (days)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Time for planet to complete one orbit</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="orbital_period" name="orbital_period" 
+                                   class="form-input" placeholder="e.g., 3.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transit_duration" class="form-label">
+                                Transit Duration (hours)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Duration of planet crossing star</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="transit_duration" name="transit_duration" 
+                                   class="form-input" placeholder="e.g., 2.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transit_depth" class="form-label">
+                                Transit Depth (ppm)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Drop in stellar brightness during transit</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="transit_depth" name="transit_depth" 
+                                   class="form-input" placeholder="e.g., 500">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="snr" class="form-label">
+                                Signal-to-Noise Ratio
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Quality of transit signal</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="snr" name="snr" 
+                                   class="form-input" placeholder="e.g., 15">
+                        </div>
+
+                        <!-- Planetary Properties -->
+                        <div class="form-group">
+                            <label for="planet_radius" class="form-label">
+                                Planet Radius (Earth radii)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Radius relative to Earth</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="planet_radius" name="planet_radius" 
+                                   class="form-input" placeholder="e.g., 1.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="semi_major_axis" class="form-label">
+                                Semi-major Axis (AU)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Average orbital distance</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="semi_major_axis" name="semi_major_axis" 
+                                   class="form-input" placeholder="e.g., 0.05">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eq_temperature" class="form-label">
+                                Equilibrium Temperature (K)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Estimated planet temperature</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="eq_temperature" name="eq_temperature" 
+                                   class="form-input" placeholder="e.g., 1200">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="impact_parameter" class="form-label">
+                                Impact Parameter
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Transit geometry parameter (0-1)</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="impact_parameter" name="impact_parameter" 
+                                   class="form-input" placeholder="e.g., 0.5">
+                        </div>
+
+                        <!-- Stellar Properties -->
+                        <div class="form-group">
+                            <label for="stellar_temp" class="form-label">
+                                Stellar Temperature (K)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Host star temperature</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="stellar_temp" name="stellar_temp" 
+                                   class="form-input" placeholder="e.g., 5778">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stellar_radius" class="form-label">
+                                Stellar Radius (Solar radii)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Star radius relative to Sun</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="stellar_radius" name="stellar_radius" 
+                                   class="form-input" placeholder="e.g., 1.0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stellar_mass" class="form-label">
+                                Stellar Mass (Solar masses)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Star mass relative to Sun</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="stellar_mass" name="stellar_mass" 
+                                   class="form-input" placeholder="e.g., 1.0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stellar_magnitude" class="form-label">
+                                Stellar Magnitude
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Apparent brightness of star</span>
+                                </span>
+                            </label>
+                            <input type="number" step="any" id="stellar_magnitude" name="stellar_magnitude" 
+                                   class="form-input" placeholder="e.g., 12.5">
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary" id="predictBtn">
+                            🚀 Analyze Transit Signal
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="resetBtn">
+                            🔄 Reset Form
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="exampleBtn">
+                            📝 Load Example Data
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2 class="section-title">🔬 Analysis Results</h2>
+                
+                <div class="result-card" id="resultCard">
+                    <div class="result-header">
+                        <h3 class="result-title" id="resultTitle">Classification</h3>
+                        <span class="result-badge" id="resultBadge">Processing...</span>
+                    </div>
+                    
+                    <div class="probability-bars">
+                        <div class="probability-item">
+                            <div class="probability-label">
+                                <span>❌ False Positive</span>
+                                <span id="falsePositivePercent">0%</span>
+                            </div>
+                            <div class="probability-bar">
+                                <div class="probability-fill false-positive" id="falsePositiveBar"></div>
+                            </div>
+                        </div>
+
+                        <div class="probability-item">
+                            <div class="probability-label">
+                                <span>⚠️ Planetary Candidate</span>
+                                <span id="candidatePercent">0%</span>
+                            </div>
+                            <div class="probability-bar">
+                                <div class="probability-fill candidate" id="candidateBar"></div>
+                            </div>
+                        </div>
+
+                        <div class="probability-item">
+                            <div class="probability-label">
+                                <span>✅ Confirmed Exoplanet</span>
+                                <span id="confirmedPercent">0%</span>
+                            </div>
+                            <div class="probability-bar">
+                                <div class="probability-fill confirmed" id="confirmedBar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-interpretation" id="resultInterpretation">
+                        <!-- Interpretation will be inserted here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Analyzing transit signal...</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with TensorFlow/Keras • Trained on NASA Kepler, K2, and TESS data</p>
+            <p>Neural Network with Attention Mechanism • SMOTE Class Balancing</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
