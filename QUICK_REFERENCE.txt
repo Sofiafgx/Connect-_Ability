@@ -1,0 +1,142 @@
+================================================================================
+                    EXOPLANET DETECTION SYSTEM
+                      Quick Reference Card
+================================================================================
+
+INSTALLATION
+------------
+pip install -r requirements.txt
+python3 train_model.py              # First time only (5-15 min)
+
+USAGE
+-----
+python3 exoplanet_predict.py        # Interactive mode
+python3 batch_predict.py input.csv  # Batch processing
+
+INPUT PARAMETERS
+----------------
+REQUIRED:
+  - orbital_period (days)           Example: 365.25 (Earth)
+  - transit_depth (ppm or %)        Example: 84 (Earth-like)
+  - transit_duration (hours)        Example: 13.0
+  - stellar_radius (solar radii)    Example: 1.0 (Sun-like)
+
+OPTIONAL (with defaults):
+  - stellar_mass (solar masses)     Default: 1.0
+  - stellar_temp (Kelvin)           Default: 5778
+  - snr (signal-to-noise)           Default: 10.0
+  - stellar_magnitude               Default: 12.0
+
+CALCULATED AUTOMATICALLY
+------------------------
+✓ Impact Parameter
+✓ Semi-Major Axis (AU)
+✓ Planet Radius (Earth radii)
+✓ Equilibrium Temperature (K)
+✓ Habitability Assessment
+
+OUTPUT CLASSIFICATIONS
+----------------------
+CONFIRMED       - High-confidence exoplanet
+CANDIDATE       - Potential exoplanet, needs follow-up
+FALSE_POSITIVE  - Likely not a planet
+
+EXAMPLE USAGE
+-------------
+$ python3 exoplanet_predict.py
+
+Orbital Period (days): 365.25
+Transit Depth (ppm or %): 84
+Transit Duration (hours): 13.0
+Stellar Radius (solar radii): 1.0
+...
+
+Output:
+  📊 CLASSIFICATION: CONFIRMED
+  🎯 CONFIDENCE: 87.34%
+  🪐 Planet Radius: 1.021 Earth radii
+  🌡️  Temperature: 278.3 K
+  🔭 Semi-major axis: 1.0000 AU
+
+BATCH CSV FORMAT
+----------------
+orbital_period,transit_depth,transit_duration,stellar_radius,...
+365.25,84,13.0,1.0,1.0,5778,15.0,11.5
+3.52,2800,4.2,1.2,1.1,5200,22.5,10.8
+
+MODEL PERFORMANCE
+-----------------
+Accuracy: 76.74%
+F1 Score: 0.767
+Training Samples: 15,775
+Data Source: NASA Kepler + TESS
+
+FILES
+-----
+Core:
+  exoplanet_predict.py      - Interactive CLI
+  batch_predict.py          - Batch processing
+  train_model.py            - Model training
+  
+Modules:
+  exoplanet_model.py        - ML model
+  exoplanet_physics.py      - Physics calculations
+  exoplanet_data_fetcher.py - NASA data download
+  
+Documentation:
+  README_EXOPLANET.md       - Full documentation
+  QUICKSTART.md             - Step-by-step guide
+  USAGE_EXAMPLES.md         - 10+ examples
+  PROJECT_SUMMARY.md        - Complete overview
+  
+Generated:
+  exoplanet_model.pkl       - Trained model
+  exoplanet_training_data.csv - Training data
+  feature_importance.csv    - Feature rankings
+
+TIPS
+----
+• SNR > 15: High quality, reliable
+• SNR 7-15: Good for candidates
+• SNR < 7: Use with caution
+
+• Transit depth in ppm (>1) or fraction (≤1)
+• Model auto-detects and handles both
+
+• Confidence >80%: Very reliable
+• Confidence 60-80%: Moderate
+• Confidence <60%: Uncertain
+
+PLANET SIZE CATEGORIES
+----------------------
+< 1.25 R_earth  - Earth-like (Rocky)
+1.25-2.0        - Super-Earth
+2.0-6.0         - Neptune-like
+> 6.0           - Jupiter-like (Gas Giant)
+
+TEMPERATURE ZONES
+-----------------
+< 200 K         - Frozen world
+200-350 K       - Potentially habitable
+> 350 K         - Hot world
+
+TROUBLESHOOTING
+---------------
+Q: "Model file not found"
+A: Run: python3 train_model.py
+
+Q: Training too slow
+A: Fast mode is default (~5-10 min)
+
+Q: Low confidence
+A: Check SNR >7 and parameter validity
+
+SUPPORT
+-------
+Documentation: README_EXOPLANET.md
+Examples: USAGE_EXAMPLES.md
+Quick Start: QUICKSTART.md
+
+================================================================================
+Version 1.0 | Trained on 15,775 NASA observations | Accuracy: 76.74%
+================================================================================

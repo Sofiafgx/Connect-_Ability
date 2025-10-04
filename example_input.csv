@@ -1,0 +1,6 @@
+orbital_period,transit_depth,transit_duration,stellar_radius,stellar_mass,stellar_temp,snr,stellar_magnitude
+365.25,84,13.0,1.0,1.0,5778,15.0,11.5
+3.52,2800,4.2,1.2,1.1,5200,22.5,10.8
+88.0,156,8.5,0.9,0.95,5500,18.2,12.1
+224.7,92,10.2,1.05,1.02,5850,16.8,11.9
+10.5,4200,5.8,1.3,1.25,4800,25.3,9.7
