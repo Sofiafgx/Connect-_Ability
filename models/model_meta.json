@@ -1,0 +1,34 @@
+{
+  "feature_names": [
+    "orbital_period_days",
+    "transit_depth_fraction",
+    "transit_duration_hours",
+    "stellar_radius_solar",
+    "stellar_mass_solar",
+    "stellar_temperature_k",
+    "snr",
+    "stellar_magnitude",
+    "a_au",
+    "impact_parameter",
+    "planet_radius_earth",
+    "stellar_density_solar"
+  ],
+  "class_weights": {
+    "confirmed exoplanet": 1.0632026739592828,
+    "false positive": 0.7043075684380032,
+    "planetary candidate": 1.5634495084897229
+  },
+  "metrics": {
+    "macro_f1": 0.7338597619074404,
+    "per_class_f1": {
+      "confirmed exoplanet": 0.8215839860748477,
+      "false positive": 0.776,
+      "planetary candidate": 0.6039952996474736
+    },
+    "support": {
+      "confirmed exoplanet": 549,
+      "false positive": 828,
+      "planetary candidate": 373
+    }
+  }
+}
