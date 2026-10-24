@@ -1,0 +1,181 @@
+2025-10-03 22:13:21.628523: E external/local_xla/xla/stream_executor/cuda/cuda_platform.cc:51] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: UNKNOWN ERROR (303)
+================================================================================
+ EXOPLANET DETECTION AI - TRAINING PIPELINE
+ NASA Kepler, K2, and TESS Missions Data
+================================================================================
+
+[STEP 1/5] Loading NASA Exoplanet Data
+--------------------------------------------------------------------------------
+Downloading Kepler cumulative dataset...
+Kepler data saved to data/kepler_data.csv
+Preprocessing Kepler data: 9564 rows
+Processed Kepler data: 9564 rows
+Label distribution:
+label
+0    4839
+2    2746
+1    1979
+Name: count, dtype: int64
+Downloading TESS TOI dataset...
+TESS data saved to data/tess_data.csv
+Preprocessing TESS data: 7703 rows
+Processed TESS data: 7703 rows
+Label distribution:
+label
+2    5825
+0    1295
+1     583
+Name: count, dtype: int64
+
+Combined dataset: 17267 rows
+Data saved to data/combined_exoplanet_data.csv
+
+[STEP 2/5] Preparing Training Data
+--------------------------------------------------------------------------------
+
+Final dataset shape: (17267, 11)
+Features: ['orbital_period', 'transit_duration', 'transit_depth', 'planet_radius', 'semi_major_axis', 'eq_temperature', 'impact_parameter', 'stellar_temp', 'stellar_radius', 'stellar_mass', 'stellar_magnitude']
+Label distribution:
+0    6134
+1    2562
+2    8571
+Name: count, dtype: int64
+
+Training set: 12086
+Validation set: 1727
+Test set: 3454
+
+[STEP 3/5] Building Neural Network
+--------------------------------------------------------------------------------
+
+============================================================
+Model Architecture
+============================================================
+Model: "exoplanet_classifier"
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)        ┃ Output Shape      ┃    Param # ┃ Connected to      ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+│ input (InputLayer)  │ (None, 11)        │          0 │ -                 │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dense_1 (Dense)     │ (None, 256)       │      3,072 │ input[0][0]       │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ bn_1                │ (None, 256)       │      1,024 │ dense_1[0][0]     │
+│ (BatchNormalizatio… │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dropout_1 (Dropout) │ (None, 256)       │          0 │ bn_1[0][0]        │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dense_2 (Dense)     │ (None, 128)       │     32,896 │ dropout_1[0][0]   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ bn_2                │ (None, 128)       │        512 │ dense_2[0][0]     │
+│ (BatchNormalizatio… │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dropout_2 (Dropout) │ (None, 128)       │          0 │ bn_2[0][0]        │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dense_3 (Dense)     │ (None, 64)        │      8,256 │ dropout_2[0][0]   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ bn_3                │ (None, 64)        │        256 │ dense_3[0][0]     │
+│ (BatchNormalizatio… │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dropout_3 (Dropout) │ (None, 64)        │          0 │ bn_3[0][0]        │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ attention_tanh      │ (None, 64)        │      4,160 │ dropout_3[0][0]   │
+│ (Dense)             │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ attention_weights   │ (None, 64)        │      4,160 │ attention_tanh[0… │
+│ (Dense)             │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ attention_multiply  │ (None, 64)        │          0 │ dropout_3[0][0],  │
+│ (Multiply)          │                   │            │ attention_weight… │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dense_4 (Dense)     │ (None, 32)        │      2,080 │ attention_multip… │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dropout_4 (Dropout) │ (None, 32)        │          0 │ dense_4[0][0]     │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ output (Dense)      │ (None, 3)         │         99 │ dropout_4[0][0]   │
+└─────────────────────┴───────────────────┴────────────┴───────────────────┘
+ Total params: 56,515 (220.76 KB)
+ Trainable params: 55,619 (217.26 KB)
+ Non-trainable params: 896 (3.50 KB)
+
+[STEP 4/5] Training Model
+--------------------------------------------------------------------------------
+This may take several minutes depending on your hardware...
+
+Applying SMOTE to balance classes...
+Original training set: 12086 samples
+Balanced training set: 17997 samples
+Class distribution after SMOTE:
+0    5999
+1    5999
+2    5999
+Name: count, dtype: int64
+
+============================================================
+Training Neural Network
+============================================================
+Epoch 1/100
+Traceback (most recent call last):
+  File "/workspace/train.py", line 96, in <module>
+    classifier, results = main()
+                          ~~~~^^
+  File "/workspace/train.py", line 58, in main
+    history = classifier.train(
+        X_train, y_train,
+    ...<2 lines>...
+        batch_size=32
+    )
+  File "/workspace/model.py", line 131, in train
+    self.history = self.model.fit(
+                   ~~~~~~~~~~~~~~^
+        X_train_balanced, y_train_balanced,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        verbose=1
+        ^^^^^^^^^
+    )
+    ^
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/utils/traceback_utils.py", line 122, in error_handler
+    raise e.with_traceback(filtered_tb) from None
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/tensorflow/python/eager/execute.py", line 59, in quick_execute
+    except TypeError as e:
+    ...<5 lines>...
+      raise e
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Graph execution error:
+
+Detected at node UnsortedSegmentSum defined at (most recent call last):
+  File "/workspace/train.py", line 96, in <module>
+
+  File "/workspace/train.py", line 58, in main
+
+  File "/workspace/model.py", line 131, in train
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/utils/traceback_utils.py", line 117, in error_handler
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/trainer.py", line 377, in fit
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/trainer.py", line 220, in function
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/trainer.py", line 133, in multi_step_on_iterator
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/trainer.py", line 114, in one_step_on_data
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/trainer.py", line 85, in train_step
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/trainers/trainer.py", line 490, in compute_metrics
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/trainers/compile_utils.py", line 334, in update_state
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/trainers/compile_utils.py", line 21, in update_state
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/metrics/confusion_metrics.py", line 1357, in update_state
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/metrics/metrics_utils.py", line 484, in update_confusion_matrix_variables
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/metrics/metrics_utils.py", line 275, in _update_confusion_matrix_variables_optimized
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/ops/math.py", line 86, in segment_sum
+
+  File "/home/ubuntu/.local/lib/python3.13/site-packages/keras/src/backend/tensorflow/math.py", line 23, in segment_sum
+
+data.shape = [32] does not start with segment_ids.shape = [96]
+	 [[{{node UnsortedSegmentSum}}]] [Op:__inference_multi_step_on_iterator_4524]
